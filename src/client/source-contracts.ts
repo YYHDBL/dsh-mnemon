@@ -67,4 +67,6 @@ export interface MemorySourcePageProps {
    * header already carries its title.
    */
   standalone?: boolean
+  /** Present the Source as a simple saved preference list. */
+  preferencesOnly?: boolean
 }

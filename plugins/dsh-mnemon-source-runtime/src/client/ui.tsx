@@ -51,7 +51,7 @@ function RuntimeSourceView(props: MemorySourcePageProps): JSX.Element | null {
   // A conversation turn opens the entry it wrote; each visit starts from that entry.
   const navigation = props.navigationInput
   const focus = typeof navigation === 'object' && navigation !== null && !Array.isArray(navigation) && typeof navigation.seed === 'string' && navigation.seed !== '' ? navigation : undefined
-  return <RuntimePage key={typeof focus?.nonce === 'number' ? focus.nonce : 0} {...(focus === undefined ? {} : { focusText: focus.seed as string })} {...(props.onRevealElement === undefined ? {} : { onRevealElement: props.onRevealElement })} client={client} revision={revision} writeEnabled={props.writable === true} onMutate={handleMutate} />
+  return <RuntimePage key={typeof focus?.nonce === 'number' ? focus.nonce : 0} {...(focus === undefined ? {} : { focusText: focus.seed as string })} {...(props.onRevealElement === undefined ? {} : { onRevealElement: props.onRevealElement })} client={client} revision={revision} writeEnabled={props.writable === true} preferencesOnly={props.preferencesOnly === true} onMutate={handleMutate} />
 }
 
 export function RuntimeSourcePage(props: MemorySourcePageProps): ReactNode {

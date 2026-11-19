@@ -143,6 +143,8 @@ export interface Config {
   /** Entry placement only. Legacy `buildin` input is migrated to `builtin`. */
   displayMode?: MnemonDisplayMode | 'buildin'
   tabEnabled?: boolean
+  /** Use the single-user preference panel and conservative automatic preference capture. */
+  preferencesOnly?: boolean
   writeEnabled?: boolean
   /** Require DSH approval before model-facing memory tools mutate data. */
   confirmWrites?: boolean
@@ -224,6 +226,7 @@ export interface ResolvedConfig {
   routingGuidance: boolean
   displayMode: MnemonDisplayMode
   tabEnabled: boolean
+  preferencesOnly: boolean
   writeEnabled: boolean
   confirmWrites: boolean
   /** Remote management grant for paired pages; loopback pages keep full access. */

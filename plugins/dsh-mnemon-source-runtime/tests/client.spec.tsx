@@ -145,7 +145,7 @@ describe('independent Runtime Source client', () => {
     } finally { cleanup(); await runner.dispose(); rmSync(directory, { recursive: true, force: true }) }
   })
 
-  it('edits and removes exact entries through the real Source without changing containing entries or another instance', async () => {
+  it.each([false, true])('edits and removes exact entries through the real Source (preferences only: %s)', async (preferencesOnly) => {
     const directory = mkdtempSync(join(tmpdir(), 'mnemon-runtime-exact-client-'))
     const runner = new MemoryCompositionRunner()
     try {
@@ -158,14 +158,20 @@ describe('independent Runtime Source client', () => {
         await client.mutate('mutate', { action: 'add', target: 'memory', content: 'X', branches: ['main'] }, { confirmed: true })
       }
       const otherBefore = await personal.read('snapshot')
-      const props = { sourceTypeId: 'runtime', sourceInstanceKey: 'source:work', sourceInstances: [], locale: 'en', management: work }
+      const props = { sourceTypeId: 'runtime', sourceInstanceKey: 'source:work', sourceInstances: [], locale: 'en', management: work, preferencesOnly }
       const view = render(<RuntimeSourcePage {...props} writable={false} />)
       await screen.findByText('X')
       expect(screen.queryByRole('button', { name: t('runtime.editAction') })).toBeNull()
       expect(screen.queryByRole('button', { name: t('runtime.removeAction') })).toBeNull()
 
       view.rerender(<RuntimeSourcePage {...props} writable />)
+      if (preferencesOnly) {
+        expect(screen.getByText(t('preferences.description'))).toBeTruthy()
+        expect(screen.queryByRole('button', { name: t('runtime.addButton') })).toBeNull()
+        expect(screen.queryByLabelText(t('runtime.filterAria'))).toBeNull()
+      }
       fireEvent.click(within(screen.getByText('X').closest('article')!).getByRole('button', { name: t('runtime.editAction') }))
+      if (preferencesOnly) expect(screen.queryByRole('textbox', { name: t('runtime.branches') })).toBeNull()
       fireEvent.change(screen.getByRole('textbox', { name: t('runtime.editContent') }), { target: { value: 'LINUX' } })
       fireEvent.click(screen.getByRole('button', { name: t('runtime.saveEdit') }))
       await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())

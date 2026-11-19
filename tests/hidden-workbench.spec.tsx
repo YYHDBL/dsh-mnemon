@@ -34,9 +34,9 @@ function SourcePage(props: MemorySourcePageProps) {
 }
 const renderSlot = (() => <></>) as NonNullable<Parameters<typeof MnemonWorkbench>[0]['renderSlot']>
 const sourceSlot: typeof renderSlot = (_name, props) => <SourcePage {...props as unknown as MemorySourcePageProps} />
-function transport() {
+function transport(sourceTypeId = 'skills') {
   const call = vi.fn(async (_channel: string, endpoint: string, input: Record<string, unknown> = {}) => {
-    if (endpoint === 'source-management-catalog') return { ok: true, value: { generationId: 'test', sources: [{ sourceTypeId: 'skills', sourceInstanceKey: 'source:skills', packageName: 'skills', revision: 'r1', assistance: ['task'], availability: 'ready', role: 'skills', capabilities: ['read', 'write'], management: { label: 'Skills', description: '' } }] } }
+    if (endpoint === 'source-management-catalog') return { ok: true, value: { generationId: 'test', sources: [{ sourceTypeId, sourceInstanceKey: `source:${sourceTypeId}`, packageName: sourceTypeId, revision: 'r1', assistance: ['task'], availability: 'ready', role: 'source', capabilities: ['read', 'write'], management: { label: sourceTypeId, description: '' } }] } }
     if (endpoint === 'dashboard') return { ok: true, value: { entries: [] } }
     if (endpoint === 'status-summary') return { ok: true, value: { healthy: true, writeEnabled: true, version: 'test', memoryBodies: [] } }
     if (endpoint === 'source-management-read') return { ok: true, value: { revision: 'r1', value: `${input.sessionId}/${input.workspaceId}` } }
@@ -50,6 +50,21 @@ function transport() {
 }
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers() })
 describe('retained hidden workbench', () => {
+  it('opens the Runtime preference list as its settings home in preferences-only mode', async () => {
+    const { connection } = transport('runtime')
+    const runtimePages = [{ id: 'runtime/entries', sourceTypeId: 'runtime', pageId: 'entries', label: '运行时记忆', order: 10 }]
+    const runtimeDirectory: MemorySourcePageDirectory = {
+      subscribe: () => () => {},
+      getSnapshot: () => runtimePages,
+    }
+    const settings = settingsScope<Config>({ status: 'ready', value: { preferencesOnly: true } })
+    render(<MnemonWorkbench connection={connection} settingsScope={settings} sourcePageDirectory={runtimeDirectory}
+      renderSlot={sourceSlot} inSettings />)
+    expect(await screen.findByText('undefined/undefined')).not.toBeNull()
+    expect(document.querySelector('[data-mnemon-in-settings="true"]')).not.toBeNull()
+    expect(screen.queryByRole('navigation', { name: t('nav.aria') })).toBeNull()
+  })
+
   it.each(['mutate', 'assistance'] as const)('refreshes empty skill history after a successful %s without a new conversation event', async mode => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const { connection, call } = transport()

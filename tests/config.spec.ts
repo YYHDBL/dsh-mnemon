@@ -6,10 +6,20 @@ import { Config as RuntimeConfig } from 'dsh-mnemon-source-runtime'
 import { RUNTIME_MEMORY_LIMIT_MAX_BYTES, RUNTIME_MEMORY_LIMITS } from 'dsh-mnemon-source-runtime/contracts'
 import { Config, resolveConfig, resolveSkillsConfig } from "../src/host/config.ts"
 import { mainStrategyTypeId, withMainStrategy } from '../src/host/main-strategy.ts'
+import { reviewPersona } from '../src/host/subagent-prompts.ts'
 
 afterEach(() => vi.unstubAllEnvs())
 
 describe('Mnemon config and resolution', () => {
+  it('opts into automatic office preferences without changing the standard reviewer', () => {
+    expect(resolveConfig({}).preferencesOnly).toBe(false)
+    expect(resolveConfig({ preferencesOnly: true }).preferencesOnly).toBe(true)
+    expect(reviewPersona(true)).toContain('inferred preferences do not qualify')
+    const persona = reviewPersona(true, true)
+    expect(persona).toContain('repeated corrections')
+    expect(persona).not.toContain('mnemon_document_create')
+    expect(persona).toContain('target=user')
+  })
   it('keeps low-priority Runtime projection deferral opt-in and validates it (#364)', () => {
     expect(resolveConfig({}).runtimeMemory.deferLowPriority).toBe(false)
     expect(resolveConfig({ runtimeMemory: { deferLowPriority: true } }).runtimeMemory.deferLowPriority).toBe(true)

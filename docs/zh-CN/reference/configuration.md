@@ -140,6 +140,7 @@ mnemon:
 | `idleReview.maxTokens` | `16384` | 128–131072 | 每次模型响应输出上限 |
 | `displayMode` | `sidebar` | `sidebar` / `builtin`；兼容旧值 `buildin` | 记忆系统入口：独立 Sidebar 或会话内标签页，共用同一工作台；旧拼写自动迁移为 `builtin` |
 | `tabEnabled` | `true` | boolean | 是否挂载所选入口和工作台；关闭后 Host RPC、命令和 Agent 工具保持注册 |
+| `preferencesOnly` | `false` | boolean | 单人办公界面在设置的「模型」下面显示「已记住的偏好」，并移除侧栏入口；空闲审查只提取有用户证据、可长期复用的偏好。项目档案、记忆空间、技能等来源仍各自通过 profile 控制。 |
 | `writeEnabled` | `true` | boolean | 是否暴露语义写工具、写 RPC 和写命令 |
 | `confirmWrites` | `false` | boolean | 每次模型调用 Mnemon 写入工具前请求 DSH 审批；开启时暂停闲时记忆整理 |
 | `syncEnabled` | `false` | boolean | 本机是否同步到 Git 仓库。默认关闭，关闭时保持沉默：存储页那一行只有标题与开关，不读取状态，也不执行 Git 命令。仓库、分支、目录、提交身份、令牌与自动同步间隔（`autoBackupMinutes`）保存在 `state/sync-git.json`，不在这里 |

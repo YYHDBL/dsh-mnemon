@@ -302,6 +302,7 @@ export const Config: z<SharedConfig> = z.object({
   // Retain the raw alias here so startup can migrate the exact stored field.
   displayMode: z.union(['sidebar', 'builtin', 'buildin'] as const).default('sidebar'),
   tabEnabled: z.boolean().default(true),
+  preferencesOnly: z.boolean().default(false),
   writeEnabled: z.boolean().default(true),
   confirmWrites: z.boolean().default(false),
   remoteAccess: z.union(['read-only', 'trusted-host'] as const).default('read-only'),

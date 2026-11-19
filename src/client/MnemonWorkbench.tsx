@@ -49,6 +49,7 @@ interface MnemonWorkbenchProps {
   surface?: MnemonDisplayMode
   /** Retain page state while hidden, pause automatic refreshes, and refresh when reopened. */
   active?: boolean
+  inSettings?: boolean
   /**
    * The header is the top edge of the window, as in DSH's main column. DSH Desktop then
    * moves the window by it, like its own page headers, while its controls stay clickable.
@@ -268,7 +269,7 @@ export function MnemonWorkbench(props: MnemonWorkbenchProps): JSX.Element {
   return <I18nContext.Provider value={t}><LocaleContext.Provider value={props.locale ?? 'zh'}><MnemonWorkspace {...visibleProps.current} active={active} /></LocaleContext.Provider></I18nContext.Provider>
 }
 
-function MnemonWorkspace({ connection, settingsScope, sessionId, workspaceId, workspaceSelection, surface = 'sidebar', active = true, titleBar = false, headerActions, onClose, configuration, componentChanges, sourcePageDirectory = EMPTY_SOURCE_PAGE_DIRECTORY, renderSlot, focus, hiddenSourceTypes, skillsScope }: MnemonWorkbenchProps): JSX.Element {
+function MnemonWorkspace({ connection, settingsScope, sessionId, workspaceId, workspaceSelection, surface = 'sidebar', active = true, titleBar = false, inSettings = false, headerActions, onClose, configuration, componentChanges, sourcePageDirectory = EMPTY_SOURCE_PAGE_DIRECTORY, renderSlot, focus, hiddenSourceTypes, skillsScope }: MnemonWorkbenchProps): JSX.Element {
   const shellRef = useRef<HTMLElement>(null)
   useMemoryComposerInset(shellRef, surface === 'builtin')
   const t = useT()
@@ -291,7 +292,8 @@ function MnemonWorkspace({ connection, settingsScope, sessionId, workspaceId, wo
   const getSkillsSnapshot = useCallback(() => skillsSeat.getSnapshot(), [skillsSeat])
   const skillsSnapshot = useSyncExternalStore(subscribeSkills, getSkillsSnapshot, getSkillsSnapshot)
   // The Source types this view shows: the focused one alone, or all but those with an entry of their own.
-  const focusType = focus?.sourceTypeId
+  const preferencesOnly = settingsSnapshot.value?.preferencesOnly === true && focus === undefined
+  const focusType = preferencesOnly ? 'runtime' : focus?.sourceTypeId
   const hiddenKey = hiddenSourceTypes?.join('\u0000') ?? ''
   const shows = useCallback((sourceTypeId: string): boolean => focusType !== undefined ? sourceTypeId === focusType : !hiddenKey.split('\u0000').includes(sourceTypeId), [focusType, hiddenKey])
   const sourcePageEntries = useMemo(() => allSourcePageEntries.filter(entry => shows(entry.sourceTypeId)), [allSourcePageEntries, shows])
@@ -483,7 +485,7 @@ function MnemonWorkspace({ connection, settingsScope, sessionId, workspaceId, wo
         await skillsScope.mutate([{ op: 'set', path: ['evolution'], value: evolution }])
       },
     }
-    const openSettings = openConfiguration === undefined ? undefined : (section?: string) => { requestComponentPage(selected.packageName, section); openConfiguration() }
+    const openSettings = preferencesOnly || openConfiguration === undefined ? undefined : (section?: string) => { requestComponentPage(selected.packageName, section); openConfiguration() }
     const rawStrategy = settingsSnapshot.value?.persistenceStrategy
     const preferences = skillsPreferences ?? (!isDefaultSourceInstance(selected.sourceInstanceKey, 'memory-spaces') ? undefined : {
       value: {
@@ -513,6 +515,7 @@ function MnemonWorkspace({ connection, settingsScope, sessionId, workspaceId, wo
       ...(onClose === undefined ? {} : { onReturnToConversation: onClose }),
       ...(openSettings === undefined ? {} : { onOpenSettings: openSettings }),
       ...(focusType === undefined ? {} : { standalone: true }),
+      ...(preferencesOnly ? { preferencesOnly: true } : {}),
     }, { only: entryId })
   }
   const activeStoppedType = stoppedSourceTypeId(page)
@@ -564,16 +567,16 @@ function MnemonWorkspace({ connection, settingsScope, sessionId, workspaceId, wo
 
   // A focused view's gear opens its own component's settings rather than the whole configuration.
   const focusPackage = focusType === undefined ? undefined : sourceInstances.find(source => source.sourceTypeId === focusType)?.packageName
-  const openSettings = openConfiguration === undefined ? undefined
+  const openSettings = preferencesOnly || openConfiguration === undefined ? undefined
     : focusPackage === undefined ? (focusType === undefined ? openConfiguration : undefined)
       : () => { requestComponentPage(focusPackage); openConfiguration() }
   return (
-    <main ref={shellRef} className={appearanceClass(css.shell, sidebarCss.shell)} data-dsh-plugin="dsh-mnemon" data-dsh-part="mnemon-view" data-mnemon-surface={surface} data-mnemon-focus={focusType}>
+    <main ref={shellRef} className={appearanceClass(css.shell, sidebarCss.shell)} data-dsh-plugin="dsh-mnemon" data-dsh-part="mnemon-view" data-mnemon-surface={surface} data-mnemon-focus={focusType} data-mnemon-in-settings={inSettings || undefined}>
       <header className={appearanceClass(css.masthead, sidebarCss.masthead)} data-window-drag={titleBar || undefined}>
         {onClose !== undefined && <button type="button" className={appearanceClass(css.ghostButton, css.backButton)} onClick={onClose} aria-label={t('header.backToConversation')}><IconChevronLeftOutline14 size={14} /><span>{t('header.backToConversation')}</span></button>}
         <div className={appearanceClass(css.brand, sidebarCss.brand)}>
-          <h1>{focus?.title ?? t('tab.label')}</h1>
-          {surface === 'sidebar' && <>
+          <h1>{preferencesOnly ? t('preferences.title') : focus?.title ?? t('tab.label')}</h1>
+          {surface === 'sidebar' && !preferencesOnly && <>
             <span className={css.storageMode} aria-label={t('workspace.storageModeAria', { mode: storageModeText })}><span>{t('workspace.storageMode')}</span><strong>{storageModeText}</strong></span>
             {workspacePicker}
             {canAlignWorkspace && <div className={appearanceClass(css.workspaceMismatch, sidebarCss.workspaceMismatch)} role="status" aria-label={`${t('workspace.mismatchTitle')}. ${workspaceDifference}`} title={workspaceDifference}><span>{t('workspace.mismatchShort')}</span><button type="button" onClick={workspaceSelection.onAlign}>{t('workspace.align')}</button></div>}

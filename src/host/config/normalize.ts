@@ -238,6 +238,7 @@ export function resolveConfig(config: SharedConfig = {}): SharedResolvedConfig {
     routingGuidance: config.routingGuidance ?? true,
     displayMode: normalizeDisplayMode(config.displayMode),
     tabEnabled: config.tabEnabled ?? true,
+    preferencesOnly: config.preferencesOnly ?? false,
     writeEnabled: config.writeEnabled ?? true,
     confirmWrites,
     remoteAccess: config.remoteAccess ?? 'read-only',

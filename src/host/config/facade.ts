@@ -414,7 +414,7 @@ const MUTABLE_FIELDS = [
   'embedding',
   'recallQuality',
   'routingGuidance', 'lifecycleEnabled', 'recallMode', 'writebackMode', 'idleReviewMs', 'idleReview',
-  'displayMode', 'tabEnabled', 'writeEnabled', 'confirmWrites', 'persistenceStrategy', 'taskAgentModel',
+  'displayMode', 'tabEnabled', 'preferencesOnly', 'writeEnabled', 'confirmWrites', 'persistenceStrategy', 'taskAgentModel',
   // Git sync is a profile choice the settings page makes, so its switch has to be
   // writable here; everything about a repository stays in the sync state file.
   'syncEnabled',

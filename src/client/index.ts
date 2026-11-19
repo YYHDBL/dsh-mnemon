@@ -36,6 +36,7 @@ import { MnemonBetterSidebarSeat } from './better-sidebar-seat.ts'
 import {
   MnemonSidebarWorkspaceHost,
   MnemonBuiltinWorkspaceHost,
+  MnemonWorkspaceHost,
 } from './workspace-mount.tsx'
 import { MnemonNativeSidebarSeat } from './native-sidebar-seat.ts'
 import { mountMnemonSidebarNavigation } from './native-sidebar.tsx'
@@ -392,19 +393,41 @@ export function apply(rawContext: unknown): void {
     'conversation.session.header.lineage',
     () => mountSubagentTokenUsageOverride(ctx),
   )
-  let activeMemoryWorkspace: { mode: MnemonDisplayMode; dispose: () => void } | undefined
+  const preferencesPages = createMemorySourcePageDirectory(ctx)
+  let activeMemoryWorkspace: { mode: MnemonDisplayMode | 'settings'; dispose: () => void } | undefined
   const reconcileMemoryWorkspace = (): void => {
     const snapshot = settings.getSnapshot()
     const mode = snapshot.status === 'loading' || snapshot.value?.tabEnabled === false
       ? undefined
-      : normalizeDisplayMode(snapshot.value?.displayMode)
+      : snapshot.value?.preferencesOnly === true ? 'settings' : normalizeDisplayMode(snapshot.value?.displayMode)
     if (activeMemoryWorkspace?.mode === mode) return
     activeMemoryWorkspace?.dispose()
     activeMemoryWorkspace = mode === undefined ? undefined : {
       mode,
-      dispose: mode === 'builtin'
-        ? mountBuiltinMemoryView(ctx, settings, namespace, translate, seats)
-        : mountSidebarMemoryView(ctx, settings, namespace, translate, seats),
+      dispose: mode === 'settings'
+        ? ctx.slots.inject('settings.section', () => ctx.slots.register({
+          name: 'settings.section',
+          id: 'mnemon-preferences',
+          order: 11,
+          locale: namespace,
+          label: () => translate('preferences.title'),
+          children: { [MNEMON_SOURCE_PAGE_SLOT]: { kind: 'list', scope: 'root' } },
+          inject: () => ({
+            inSettings: true,
+            connection: ctx.connection,
+            settingsScope: settings,
+            sessions: ctx.sessions,
+            workspaces: ctx.workspaces,
+            currentSession: ctx.uiSession.adapter.current,
+            localeRuntime: ctx.locale,
+            sourcePageDirectory: preferencesPages,
+            componentChanges: seats.components,
+            t: translate,
+          }),
+        }, MnemonWorkspaceHost))
+        : mode === 'builtin'
+          ? mountBuiltinMemoryView(ctx, settings, namespace, translate, seats)
+          : mountSidebarMemoryView(ctx, settings, namespace, translate, seats),
     }
   }
   ctx.effect(() => {

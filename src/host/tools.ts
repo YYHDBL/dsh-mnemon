@@ -11,6 +11,7 @@ import { agentScope, type MnemonAgentRuntimeSource, type MnemonRuntimeGraph } fr
 import { isSubagent, MnemonSubagentCoordinator } from './subagent.ts'
 import { memoryReadPresentation, memoryWritePresentation, namedToolPresentation } from './activity-presentation.ts'
 import { assertAgentMemoryIncluded } from './workspace-exclusion.ts'
+import { OFFICE_PREFERENCE_CAPTURE } from './subagent-prompts.ts'
 
 const text = (value: unknown): Array<{ type: 'text'; text: string }> => [{
   type: 'text',
@@ -391,6 +392,7 @@ function registerDocumentTools(ctx: HostContextShape, { requireSource, config, s
 
 /** The runtime memory tool, which writes USER.md and MEMORY.md. */
 function registerRuntimeTools(ctx: HostContextShape, { requireSource, config, composableTurn }: ToolHelpers, coordinator: MnemonSubagentCoordinator): void {
+  const preferenceDescription = `${OFFICE_PREFERENCE_CAPTURE} Add a new preference or replace a uniquely matched one. Use remove only when the user asks to forget an existing preference.`
   ctx.tools.register(definition({
     name: 'mnemon_runtime_memory',
     description: 'Maintain compact hot memory injected into future turns. Capture only new, explicit, durable user-authored identity/preferences or compact rules needed for future work. Project records, one-off decisions, configuration/account snapshots, investigations and progress belong in Documents when substantial and writable; otherwise skip. A general request to remember does not change that destination; honor a user who explicitly chooses Runtime, USER.md or MEMORY.md, subject to existing permissions. Never copy, promote, or summarize evidence returned by Documents, Recall, or Related unless the user explicitly asks to save that exact evidence; answering a read question must stay read-only. add creates one independent fact; replace corrects or consolidates one uniquely matched entry; remove is only for an explicitly withdrawn, obsolete, or wrong entry. target=user is only for who the user is; target=memory is for compact user-stated rules needed for future work. Skip questions, guesses, assistant-authored claims, temporary progress, completed-work logs, raw dumps, secrets, rediscoverable facts, and skill-covered guidance. This tool exclusively writes runtime MEMORY.md and USER.md; capacity archival and compaction are automatic. Optional branches (git branch names, target=memory only) project an entry only in sessions on those branches: scope does not change capture eligibility; tag new branch-scoped entries with the git branch reported in the snapshot header, omit for cross-branch facts; on replace an empty list clears the scope, and an omitted list keeps the current scope.',
@@ -410,6 +412,7 @@ function registerRuntimeTools(ctx: HostContextShape, { requireSource, config, co
       presentationMeta: namedToolPresentation('mnemon_runtime_memory') },
     execute: (args: { action: 'add' | 'replace' | 'remove'; target: RuntimeMemoryTarget; content?: string; old_text?: string; importance?: RuntimeMemoryImportance; branches?: string[] }, exec: ToolExecution) => {
       if (!config.writeEnabled) throw new Error('dsh-mnemon is configured read-only (writeEnabled: false)')
+      if (config.preferencesOnly && args.target !== 'user') throw new Error('This deployment stores only personal preferences')
       requireSource(exec, 'runtime', 'write')
       composableTurn(exec)
       const request = {
@@ -424,6 +427,7 @@ function registerRuntimeTools(ctx: HostContextShape, { requireSource, config, co
     },
     presentCall: (args: { action: string; target: string }) => ({ card: 'generic', title: `${args.action} runtime ${args.target} memory`, kind: 'edit' }),
     presentResult: () => ({ card: 'generic', title: 'Runtime memory updated' }),
+    ...(config.preferencesOnly ? { description: preferenceDescription } : {}),
   } as never))
 }
 

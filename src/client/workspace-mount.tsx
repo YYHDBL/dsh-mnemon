@@ -57,6 +57,7 @@ interface MnemonWorkspaceHostProps {
   sessionId?: string | undefined
   cwd?: string
   active?: boolean
+  inSettings?: boolean
   /** The page fills DSH's main column, so its header is the window's top edge. */
   titleBar?: boolean
   renderSlot?: PropsRenderSlots<typeof MNEMON_SOURCE_PAGE_SLOT | typeof MNEMON_COMPONENT_STATUS_SLOT>['renderSlot']
@@ -161,6 +162,7 @@ export function MnemonWorkspaceHost(props: MnemonWorkspaceHostProps): JSX.Elemen
     workspaceSelection={selection}
     active={props.active ?? true}
     titleBar={props.titleBar === true}
+    inSettings={props.inSettings === true}
     t={props.t}
     locale={locale.active}
     sourcePageDirectory={props.sourcePageDirectory}

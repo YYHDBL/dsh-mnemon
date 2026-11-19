@@ -923,6 +923,7 @@ ${naturalRequest(request, target === undefined ? REQUEST_LABELS : TARGETED_WRITE
     const config = this.runtimeSource.config
     if (!config.writeEnabled) return []
     return this.availableTools(parent, REVIEW_TOOLS).filter(tool => {
+      if (config.preferencesOnly && tool !== 'mnemon_runtime_memory') return false
       if (tool === 'mnemon_document_search') return true
       const type = memoryTool(tool)!.sourceTypeId!
       return (tool !== 'mnemon_runtime_memory' || config.idleReview.runtimeMemory) && allowsParticipation(config, type, 'write', 'automatic')
@@ -955,7 +956,7 @@ ${naturalRequest(request, target === undefined ? REQUEST_LABELS : TARGETED_WRITE
       const writers = tools.filter(tool => tool !== 'mnemon_document_search')
       if (writers.length === 0) return skipped
       const prompt = preferred === 'fork' ? 'Review the inherited completed checkpoint now.' : reviewCheckpoint(parent.session, config.maxContextChars)
-      const base = reviewPersona(tools.includes('mnemon_runtime_memory'))
+      const base = reviewPersona(tools.includes('mnemon_runtime_memory'), this.runtimeSource.config.preferencesOnly)
       const persona = preferred === 'fork' ? base : base.replaceAll('inherited', 'supplied bounded')
       // Only the automatic lifecycle supplies admission; manual reviews retain DSH's normal delegation.
       const standalone = preferred === 'spawn' && admission !== undefined && this.isolatedReviewRunner !== undefined

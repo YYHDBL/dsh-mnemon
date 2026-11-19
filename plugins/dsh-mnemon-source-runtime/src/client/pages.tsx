@@ -10,7 +10,7 @@ function fold(text: string): string {
   return text.replace(/\s+/gu, ' ').trim()
 }
 
-export function RuntimePage(props: { client: RuntimePageClient; revision: number; writeEnabled: boolean; focusText?: string; onRevealElement?(element: HTMLElement): void; onMutate?: () => void }): JSX.Element {
+export function RuntimePage(props: { client: RuntimePageClient; revision: number; writeEnabled: boolean; preferencesOnly?: boolean; focusText?: string; onRevealElement?(element: HTMLElement): void; onMutate?: () => void }): JSX.Element {
   const t = useT()
   const locale = useLocale()
   const runtimeAddFormId = useId()
@@ -122,12 +122,12 @@ export function RuntimePage(props: { client: RuntimePageClient; revision: number
     const key = entryKey(entry)
     const isRemoving = removing === key
     return <article key={key} className={css.runtimeEntry} data-importance={entry.importance} data-target={entry.target} data-focused={focused(entry) || undefined}>
-      <div className={css.runtimeEntryMeta}>{showTarget ? <div className={css.runtimeEntryBadges}><span className={css.runtimeEntryTarget}>{entry.target === 'user' ? 'USER.md' : 'MEMORY.md'}</span><span>{t(`runtime.importance.${entry.importance}` as MnemonKey)}</span>{entry.pinned === true && <span className={css.runtimeEntryBranch}>{t('runtime.pinned')}</span>}{entry.branches !== undefined && entry.branches.length > 0 && <span className={css.runtimeEntryBranch} title={t('runtime.branchBadge')}>{entry.branches.join(', ')}</span>}</div> : <><span>{t(`runtime.importance.${entry.importance}` as MnemonKey)}</span>{entry.pinned === true && <span className={css.runtimeEntryBranch}>{t('runtime.pinned')}</span>}{entry.branches !== undefined && entry.branches.length > 0 && <span className={css.runtimeEntryBranch} title={t('runtime.branchBadge')}>{entry.branches.join(', ')}</span>}</>}<time dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleString(locale)}</time></div>
+      {!props.preferencesOnly && <div className={css.runtimeEntryMeta}>{showTarget ? <div className={css.runtimeEntryBadges}><span className={css.runtimeEntryTarget}>{entry.target === 'user' ? 'USER.md' : 'MEMORY.md'}</span><span>{t(`runtime.importance.${entry.importance}` as MnemonKey)}</span>{entry.pinned === true && <span className={css.runtimeEntryBranch}>{t('runtime.pinned')}</span>}{entry.branches !== undefined && entry.branches.length > 0 && <span className={css.runtimeEntryBranch} title={t('runtime.branchBadge')}>{entry.branches.join(', ')}</span>}</div> : <><span>{t(`runtime.importance.${entry.importance}` as MnemonKey)}</span>{entry.pinned === true && <span className={css.runtimeEntryBranch}>{t('runtime.pinned')}</span>}{entry.branches !== undefined && entry.branches.length > 0 && <span className={css.runtimeEntryBranch} title={t('runtime.branchBadge')}>{entry.branches.join(', ')}</span>}</>}<time dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleString(locale)}</time></div>}
       {<p>{entry.content}</p>}
 
       {props.writeEnabled && (
         <footer>
-          {props.client.pinRuntimeMemory !== undefined && <button type="button" className={runtimeEditActionClass} disabled={saving} aria-pressed={entry.pinned === true} onClick={() => void togglePin(entry)}>{t(entry.pinned === true ? 'runtime.unpin' : 'runtime.pin')}</button>}
+          {!props.preferencesOnly && props.client.pinRuntimeMemory !== undefined && <button type="button" className={runtimeEditActionClass} disabled={saving} aria-pressed={entry.pinned === true} onClick={() => void togglePin(entry)}>{t(entry.pinned === true ? 'runtime.unpin' : 'runtime.pin')}</button>}
           <button type="button" className={runtimeEditActionClass} disabled={saving && isRemoving} onClick={() => beginEdit(entry)}>{t('runtime.editAction')}</button>
           <button type="button" className={runtimeRemoveActionClass} disabled={saving && isRemoving} onClick={() => { setRemoving(key); setEditing(null) }}>{t('runtime.removeAction')}</button>
         </footer>
@@ -160,21 +160,23 @@ export function RuntimePage(props: { client: RuntimePageClient; revision: number
   const removingEntry = removing === null ? undefined : snapshot?.entries.find(entry => entryKey(entry) === removing)
   const editForm = editingEntry === undefined ? null : <form id={runtimeEditFormId} className={css.bodyEdit} onSubmit={event => { event.preventDefault(); void replace(editingEntry) }}>
     <label>{t('runtime.editContent')}<textarea aria-label={t('runtime.editContent')} value={editContent} onChange={event => setEditContent(event.target.value)} rows={7} /></label>
-    <SelectField className={css.runtimeChoice} label={t('runtime.importance')} value={editImportance} options={importanceOptions} onChange={setEditImportance} />
-    {editingEntry.target === 'memory' && <label className={css.bodyEditBranch}>{t('runtime.branches')}<input value={editBranches} onChange={event => setEditBranches(event.target.value)} placeholder={t('runtime.branchesPlaceholder')} aria-label={t('runtime.branches')} /><small>{t('runtime.branchesHint')}</small></label>}
+    {!props.preferencesOnly && <SelectField className={css.runtimeChoice} label={t('runtime.importance')} value={editImportance} options={importanceOptions} onChange={setEditImportance} />}
+    {!props.preferencesOnly && editingEntry.target === 'memory' && <label className={css.bodyEditBranch}>{t('runtime.branches')}<input value={editBranches} onChange={event => setEditBranches(event.target.value)} placeholder={t('runtime.branchesPlaceholder')} aria-label={t('runtime.branches')} /><small>{t('runtime.branchesHint')}</small></label>}
   </form>
 
   return (
     <div className={css.page}>
-      <PageHeader title={t('runtime.title')} description={t('runtime.description')} meta={snapshot === null ? t('common.loading') : t('runtime.total', { count: snapshot.entries.length })} {...(props.writeEnabled ? { action: <button type="button" className={css.primaryButton} onClick={() => setAdding(true)}>{t('runtime.addButton')}</button> } : {})} />
+      {props.preferencesOnly
+        ? <p>{t('preferences.description')}</p>
+        : <PageHeader title={t('runtime.title')} description={t('runtime.description')} meta={snapshot === null ? t('common.loading') : t('runtime.total', { count: snapshot.entries.length })} {...(props.writeEnabled ? { action: <button type="button" className={css.primaryButton} onClick={() => setAdding(true)}>{t('runtime.addButton')}</button> } : {})} />}
       <Reveal>{error === null ? null : <div className={css.inlineError} role="alert">{error}</div>}</Reveal>
       <Reveal>{notice === null ? null : <div className={css.runtimeNotice} role="status">{notice}</div>}</Reveal>
 
       {!props.writeEnabled && <div className={css.runtimeReadOnly}>{t('runtime.readOnly')}</div>}
       {<>
-        <div className={css.runtimeSummaryGrid}>{targetSummary('user')}{targetSummary('memory')}</div>
+        {!props.preferencesOnly && <div className={css.runtimeSummaryGrid}>{targetSummary('user')}{targetSummary('memory')}</div>}
         <section className={css.runtimeBrowser} aria-label={t('runtime.entriesAria')}>
-          <div className={css.runtimeBrowserToolbar}>
+          {!props.preferencesOnly && <div className={css.runtimeBrowserToolbar}>
             <div className={css.runtimeScopeFilter} role="group" aria-label={t('runtime.scopeAria')}
               style={{ '--dsh-segment-count': 3, '--dsh-segment-index': filterTarget === 'all' ? 0 : filterTarget === 'user' ? 1 : 2 } as CSSProperties}>
               <button type="button" data-active={filterTarget === 'all' || undefined} onClick={() => setFilterTarget('all')}>{t('runtime.scopeAll')} <b>{snapshot?.entries.length ?? 0}</b></button>
@@ -182,8 +184,8 @@ export function RuntimePage(props: { client: RuntimePageClient; revision: number
               <button type="button" data-active={filterTarget === 'memory' || undefined} onClick={() => setFilterTarget('memory')}>{t('runtime.target.memory')} <b>{snapshot?.targets.memory.entryCount ?? 0}</b></button>
             </div>
             <SearchField className={css.runtimeFilterQuery} label={t('runtime.filterAria')} value={filterQuery} onChange={event => setFilterQuery(event.target.value)} placeholder={t('runtime.filterPlaceholder')} />
-          </div>
-          <div ref={listRef} className={css.runtimeUnifiedList}>{visibleEntries.map(entry => runtimeEntry(entry, true))}{!loading && filteredEntries.length === 0 && <div className={css.runtimeEmpty}><span>○</span><p>{t('runtime.noMatch')}</p></div>}</div>
+          </div>}
+          <div ref={listRef} className={css.runtimeUnifiedList} aria-busy={loading}>{visibleEntries.map(entry => runtimeEntry(entry, true))}{!loading && filteredEntries.length === 0 && <div className={css.runtimeEmpty}><span>○</span><p>{t(props.preferencesOnly ? 'preferences.empty' : 'runtime.noMatch')}</p></div>}</div>
           {!loading && <ProgressiveFooter visible={visibleEntries.length} total={filteredEntries.length} pageSize={pageSize} onMore={() => setVisibleLimit(value => value + pageSize)} />}
         </section>
       </>}

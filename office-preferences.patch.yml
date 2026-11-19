@@ -1,0 +1,48 @@
+- id: mnemon
+  config:
+    preferencesOnly: true
+    storageScope: global
+    displayMode: sidebar
+    tabEnabled: true
+    lifecycleEnabled: true
+    writeEnabled: true
+    confirmWrites: false
+    routingGuidance: false
+    recallMode: off
+    writebackMode: guided
+    memoryTopology:
+      layers:
+        documents: { enabled: false }
+        memory-spaces: { enabled: false }
+    idleReview:
+      enabled: true
+      runtimeMemory: true
+      minIntervalMs: 300000
+      maxPerSession: 3
+    conversationInteraction:
+      turnBar: false
+      saveAction: false
+    skills:
+      hints: false
+      evolution: false
+      allowCreate: false
+      allowUpdate: false
+      autoAdopt: false
+      sidebar: false
+    embedding:
+      enabled: false
+    syncEnabled: false
+- id: mnemon-source-documents
+  disabled: true
+- id: mnemon-source-memory-spaces
+  disabled: true
+- id: mnemon-source-skills
+  disabled: true
+- id: mnemon-strategy-auto-capture
+  disabled: true
+- id: mnemon-strategy-general
+  disabled: true
+- id: mnemon-strategy-light-context
+  disabled: true
+- id: mnemon-strategy-scoped
+  disabled: true
