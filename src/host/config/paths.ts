@@ -24,10 +24,11 @@ export function expandUserPath(value: string, home = homedir()): string {
   return value
 }
 
-/** Resolve the global Mnemon data directory (`MNEMON_DATA_DIR` override or `~/.mnemon`). */
+/** Resolve the global directory, keeping explicit Harness homes separate. */
 export function resolveGlobalDataDir(env: NodeJS.ProcessEnv = process.env, home = homedir()): string {
   const configured = env.MNEMON_DATA_DIR?.trim()
-  return resolve(expandUserPath(configured || '~/.mnemon', home))
+  const harnessHome = env.DSH_HOME?.trim()
+  return resolve(expandUserPath(configured || (harnessHome ? join(harnessHome, 'memory-data') : '~/.mnemon'), home))
 }
 
 function expandDirectory(value: string): string {

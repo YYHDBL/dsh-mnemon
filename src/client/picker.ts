@@ -44,9 +44,7 @@ export interface MnemonDirectoryPicker {
   createDirectory?(parentPath: string, name: string): Promise<string>
 }
 
-type PickerContext = Pick<MnemonClientContext, 'get' | 'connection'> & {
-  remote?: { directoryPicker?: RemoteDirectoryPicker }
-}
+type PickerContext = Pick<MnemonClientContext, 'get' | 'connection'> & { remote?: unknown }
 
 const MNEMON_PICKER_CHANNEL = 'mnemon/picker'
 
@@ -73,7 +71,7 @@ function normalizeNativePickResult(result: string | null | { path?: string | nul
 export function directoryPicker(ctx: PickerContext): MnemonDirectoryPicker {
   const directRemotePicker = (): RemoteDirectoryPicker | undefined => {
     try {
-      const fromCtx = ctx.remote?.directoryPicker
+      const fromCtx = (ctx.remote as { directoryPicker?: RemoteDirectoryPicker } | undefined)?.directoryPicker
       if (fromCtx !== undefined) return fromCtx
     } catch {
       // Cordis 4 context proxies throw when reading un-injected service properties; fall through to ctx.get('remote').

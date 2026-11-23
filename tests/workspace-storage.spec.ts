@@ -193,13 +193,16 @@ describe('Mnemon storage-domain inventory and centralized roots', () => {
       expect(active.areas.every(area => area.status === 'missing')).toBe(true)
     })
 
-    it('honors dataDir, then MNEMON_DATA_DIR, then the default home root', () => {
+    it('honors dataDir, then MNEMON_DATA_DIR, then the Harness home', () => {
       const workspace = temporaryDirectory(), root = temporaryDirectory()
       try {
+        vi.stubEnv('DSH_HOME', workspace)
         vi.stubEnv('MNEMON_DATA_DIR', root)
         expect(createStorageRoot({ storageScope: 'workspaces' }, workspace).effectiveDataDir()).toMatch(join(root, 'workspaces'))
         expect(createStorageRoot({ storageScope: 'workspaces', dataDir: '~/central' }, workspace).effectiveDataDir()).toMatch(join(homedir(), 'central', 'workspaces'))
         vi.stubEnv('MNEMON_DATA_DIR', '')
+        expect(createStorageRoot({ storageScope: 'global' }).effectiveDataDir()).toBe(join(workspace, 'memory-data'))
+        vi.stubEnv('DSH_HOME', '')
         expect(createStorageRoot({ storageScope: 'workspaces' }, workspace).effectiveDataDir()).toMatch(join(homedir(), '.mnemon', 'workspaces'))
       } finally { vi.unstubAllEnvs() }
     })
