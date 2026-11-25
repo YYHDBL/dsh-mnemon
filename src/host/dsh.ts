@@ -13,6 +13,12 @@ export type {
 
 export type HostRpcHandler = (endpoint: string, payload: unknown, signal?: AbortSignal) => Promise<RpcResult<unknown>>
 
+/** 宿主系统提示词组装事件中的指令段和运行时上下文。 */
+export interface HostPromptAssembly {
+  sections: Array<{ name: string; order: number; text: string }>
+  contexts: Array<{ name: string; text: string }>
+}
+
 export interface HostConnectionHandle {
   rpc: {
     handle(channel: string, handler: HostRpcHandler): unknown

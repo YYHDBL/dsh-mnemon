@@ -10,6 +10,7 @@ import type {
   HostContextShape,
   HostLlmService,
   HostPreStepDecision,
+  HostPromptAssembly,
   HostSessionEvent,
   HostUserMessage,
 } from "./dsh.ts"
@@ -96,12 +97,6 @@ interface PendingMemorySnapshot {
 interface TurnStoppingPayload extends AgentEventPayload {
   turn: number
   signal: AbortSignal
-}
-
-interface PromptAssembly {
-  sections: Array<{ name: string; text: string }>
-  contexts: Array<{ name: string; text: string }>
-  [key: string]: unknown
 }
 
 interface PromptAssemblyContext {
@@ -282,7 +277,7 @@ class MnemonAgentLifecycle {
     this.observedReviewPolicy = this.reviewPolicy()
     const disposers = [
       this.agent.ctx.on('session/event', ((session: HostAgent['session'], event: HostSessionEvent) => this.sessionEvent(session, event)) as never),
-      this.agent.ctx.on('system-prompt/assemble', ((assembly: PromptAssembly, context: PromptAssemblyContext, next: () => Promise<PromptAssembly>) => this.assemblePrompt(assembly, context, next)) as never),
+      this.agent.ctx.on('system-prompt/assemble', ((assembly: HostPromptAssembly, context: PromptAssemblyContext, next: () => Promise<HostPromptAssembly>) => this.assemblePrompt(assembly, context, next)) as never),
       // `prepend: true` makes this the outermost pre-step participant, so it
       // observes the fully assembled batch and appends after every other
       // contributor's context. The snapshot therefore has no byte-stable
@@ -433,7 +428,7 @@ class MnemonAgentLifecycle {
     return { kind: 'enter', messages: withSnapshot([...decision.messages, createPluginMessage(reminder, 'instructions')]) }
   }
 
-  private async assemblePrompt(assembly: PromptAssembly, context: PromptAssemblyContext, next: () => Promise<PromptAssembly>): Promise<PromptAssembly> {
+  private async assemblePrompt(assembly: HostPromptAssembly, context: PromptAssemblyContext, next: () => Promise<HostPromptAssembly>): Promise<HostPromptAssembly> {
     if (context.agent !== undefined && context.agent.id !== this.agent.id) return next()
     const turn = openAgentTurn(this.agent)
     if (turn === undefined) return next()
@@ -1544,7 +1539,7 @@ export class MnemonLifecycle {
         }
       }
       try {
-        stops.push(agent.ctx.on('system-prompt/assemble', (async (_assembly: PromptAssembly, context: PromptAssemblyContext, next: () => Promise<PromptAssembly>) => {
+        stops.push(agent.ctx.on('system-prompt/assemble', (async (_assembly: HostPromptAssembly, context: PromptAssemblyContext, next: () => Promise<HostPromptAssembly>) => {
           if (context.agent !== undefined && context.agent !== agent) return next()
           const turn = openAgentTurn(agent)
           if (turn !== undefined) await memory.begin(turn, context.signal)
@@ -1652,16 +1647,17 @@ export class MnemonLifecycle {
           }
           const workingDirectory = (agentCtx.get?.('workingDirectory') ?? this.ctx.get('workingDirectory')) as WorkingDirectoryService | undefined
           if (typeof workingDirectory?.set === 'function') await workingDirectory.set(child, dir.workFrom ?? dir.cwd, request.signal)
+          const persona = {
+            name: 'deployment:persona-prefix',
+            order: agentCtx.systemPrompt?.getSectionOrder?.('DEPLOYMENT_PERSONA_PREFIX') ?? 10,
+            text: request.persona,
+          }
           if (typeof agentCtx.systemPrompt?.section === 'function') {
-            agentCtx.systemPrompt.section({
-              name: 'deployment:persona-prefix',
-              order: agentCtx.systemPrompt.getSectionOrder?.('DEPLOYMENT_PERSONA_PREFIX') ?? 10,
-              text: request.persona,
-            })
+            agentCtx.systemPrompt.section(persona)
           } else if (typeof agentCtx.on === 'function') {
-            const stop = agentCtx.on('system-prompt/assemble', (async (assembly: PromptAssembly, _ctx: PromptAssemblyContext, next: () => Promise<PromptAssembly>) => {
+            const stop = agentCtx.on('system-prompt/assemble', (async (_assembly: HostPromptAssembly, _ctx: PromptAssemblyContext, next: () => Promise<HostPromptAssembly>) => {
               const assembled = await next()
-              return { ...assembled, sections: [{ name: 'deployment:persona-prefix', text: request.persona }, ...assembled.sections] }
+              return { ...assembled, sections: [persona, ...assembled.sections] }
             }) as never)
             if (typeof stop === 'function') stopPersona = stop as () => unknown
           }

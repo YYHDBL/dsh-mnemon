@@ -1,7 +1,7 @@
 import { AgentMemoryTurn, openAgentTurn } from './agent-memory-turn.ts'
 import { watchTaskTitle } from './agent-compat.ts'
 import { findSessionEvent, sessionEvents } from './session-events.ts'
-import type { HostAgent, HostPreStepDecision, HostSession, HostSessionEvent, HostUserMessage, ToolExecution } from './dsh.ts'
+import type { HostAgent, HostPreStepDecision, HostPromptAssembly, HostSession, HostSessionEvent, HostUserMessage, ToolExecution } from './dsh.ts'
 import { applyMemoryViewGuidance } from './guidance.ts'
 import { createPluginMessage } from './plugin-message.ts'
 import type { MnemonAgentRuntimeSource, MnemonRuntimeGraph } from './runtime.ts'
@@ -15,11 +15,6 @@ interface Step {
   step: number
   messages: HostUserMessage[]
   signal: AbortSignal
-}
-
-interface Assembly {
-  sections: Array<{ name: string; text: string }>
-  contexts: Array<{ name: string; text: string }>
 }
 
 const CONTINUATION_GUIDANCE = 'This is a new user request in a completed Mnemon task conversation. The previous task stays completed. Use the current memory View and ordinary memory tools for this request; require receipts for changes. Do not repeat the previous task or submit its expired completion request.'
@@ -66,7 +61,7 @@ export class TaskContinuation {
       if (typeof guard !== 'function') throw new Error('Task continuation requires a scoped memory tool guard')
       this.stops.push(guard as () => unknown)
       this.stops.push(this.agent.ctx.on('agent/pre-step', ((step: Step, next: () => Promise<HostPreStepDecision>) => this.preStep(step, next)) as never, { prepend: true }))
-      this.stops.push(this.agent.ctx.on('system-prompt/assemble', (async (_assembly: Assembly, context: { agent?: HostAgent }, next: () => Promise<Assembly>) => {
+      this.stops.push(this.agent.ctx.on('system-prompt/assemble', (async (_assembly: HostPromptAssembly, context: { agent?: HostAgent }, next: () => Promise<HostPromptAssembly>) => {
         const assembly = await next()
         if (context.agent !== undefined && context.agent !== this.agent) return assembly
         const pin = this.memory.current
